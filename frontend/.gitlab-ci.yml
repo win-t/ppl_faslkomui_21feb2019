@@ -1,0 +1,29 @@
+stages:
+- test
+- package
+- deploy
+
+test:
+  stage: test
+  script:
+  - echo "dummy test"
+
+package:
+  stage: package
+  services:
+  - docker:dind
+  image: docker:latest
+  script:
+  - set -eu
+  - export DOCKER_HOST=tcp://docker:2375/
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin "$(echo "$DOCKER_IMAGE_OUTPUT" | cut -f 1 -d /)"
+  - docker build -t "$DOCKER_IMAGE_OUTPUT" .
+  - docker push "$DOCKER_IMAGE_OUTPUT"
+
+deploy:
+  stage: deploy
+  image: alpine:latest
+  script:
+  - set -eu
+  - apk -U add curl
+  - curl -XPOST "$PORTAINER_UPDATE_HOOK"
